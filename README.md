@@ -4,7 +4,7 @@
 [![GitHub Release Date](https://img.shields.io/github/release-date/dmytrohoi/random-respawn-pyplugin)](https://github.com/dmytrohoi/random-respawn-pyplugin/releases)
 [![GitHub All Releases](https://img.shields.io/github/downloads/dmytrohoi/random-respawn-pyplugin/total)](https://github.com/dmytrohoi/random-respawn-pyplugin/releases)
 [![Required](https://img.shields.io/badge/required-minecraft--python-blue)](https://github.com/Macuyiko/minecraft-python)
-[![Spigot](https://img.shields.io/badge/spigot-1.15.2-orange)](https://www.spigotmc.org/)
+[![Spigot](https://img.shields.io/badge/spigot-1.15.2-orange)](https://www.spigotmc.org/resources/random-respawn.78929/)
 ## About
 
 Minecraft Spigot plugin on [@minecraft-python](https://github.com/Macuyiko/minecraft-python) interpreter to make randomly player respawn.
@@ -15,7 +15,7 @@ This plugin provides a random spawn point for the player if he is killed.
 
 Install [@minecraft-python](https://github.com/Macuyiko/minecraft-python) first (_**required!**_).
 
-[Download latest release](https://github.com/dmytrohoi/random-respawn-pyplugin/releases) and copy all files/directories to `/python-plugins/` server directory.
+[Download the latest release](https://github.com/dmytrohoi/random-respawn-pyplugin/releases) and copy all files/directories to `/python-plugins/` server directory.
 
 Run server.
 
@@ -31,7 +31,7 @@ Or replace values in `/python-plugins/random-respawn-pyplugin/config.json` file.
 
 ### Q: What are the default limits?
 
-By default limits is `x=50`, `z=50`. Coordinate `y` is always on top of world.
+By default limits are `x=50`, `z=50`. Coordinate `y` is always on top of world.
 
 ### **Q**: Does not work with Essentials Spawn!
 
