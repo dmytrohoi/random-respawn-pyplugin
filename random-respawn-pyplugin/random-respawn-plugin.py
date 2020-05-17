@@ -68,17 +68,33 @@ def respawn_randomly(event):
 
 
 ## Start building plugin
+# Declare plugin parameters
 plugin_parameters = {
-    'x': {'value': 50, 'type': int},
-    'z': {'value': 50, 'type': int},
+    'x': {
+        'value': 50, 'type': int,
+        'description': 'max random limit (mean -x..x) in x coordinate,'
+                       'must be an integer value (default: 50)',
+    },
+    'z': {
+        'value': 50, 'type': int,
+        'description': 'max random limit (mean -z..z) in z coordinate,'
+                       'must be an integer value (default: 50)',
+    },
+    'version': {
+        'value': '0.0.1', 'type': str, 'hide': True
+    }
 }
 
 # Create helpers
 message_formater = utils.TextFormatting('Random Spawn')
 _p = message_formater.player_message_formatter
-config = utils.Config(plugin_parameters, log, PLUGIN_NAME, PYPLUGINS_DIR_PATH)
 
-# Register listeners and command
-add_event_listener(PlayerRespawnEvent, respawn_randomly)
+# Plugin configuration
+config = utils.Config(plugin_parameters, log, PLUGIN_NAME, PYPLUGINS_DIR_PATH)
 config_command = utils.ConfigCommand("random-respawn", config, _p)
 mcapi._commandMap.register("random-respawn", config_command)
+
+# Register listeners
+add_event_listener(PlayerRespawnEvent, respawn_randomly)
+
+

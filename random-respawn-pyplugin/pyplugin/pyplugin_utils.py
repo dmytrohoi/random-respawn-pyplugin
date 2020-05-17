@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 import os
 import json
+import yaml
 
 from org.bukkit.command import Command
 
@@ -26,34 +27,67 @@ class Config(object):
     Configuration object.
 
     Attr:
-        params (dict): Dictionary with key - parameter name (str),
-            value - dictionary with 'value' (default value for parameter)
-            and 'type' (type for this parameter)
+        params (dict): Dictionary with:
+                key - parameter name (str),
+                value - dictionary with:
+                'value' - default value for parameter,
+                'type' - type for this parameter,
+                'hide' - (optional) prevent changing by in-game/console
+                    'set' command,
+                'description' - (optional) information about the parameter
+                    for add to the header in a config file.
 
     """
-    __slots__ = ['logger', '_config_path', '_config_dir_path']
+    __slots__ = ['logger', '_config_path', '_config_dir_path', 'plugin_name']
     available_params = []
+    hide_params = []
     params_types = {}
     params = {}
+    params_descriptions = {}
 
     def __init__(self, params, logger, plugin_name, plugin_dir,
-                 config_name='config.json'):
+                 config_name='config.yml'):
         """
-        Make configuration object and parse (dump) config.json file.
+        Make configuration object and parse (dump) config file.
 
         Attr:
-            params (dict): Dictionary with key - parameter name (str),
-                value - dictionary with 'value' (default value for parameter)
-                and 'type' (type for this parameter)
+            params (dict): Dictionary with:
+                  key - parameter name (str),
+                  value - dictionary with:
+                    'value' - default value for parameter,
+                    'type' - type for this parameter,
+                    'hide' - (optional) prevent changing by in-game/console
+                        'set' command,
+                    'description' - (optional) information about the parameter
+                        for add to the header in a config file.
+
+        Example:
+        {
+            'x': {
+                'value': 50, 'type': int,
+                'description': 'max random limit (mean -x..x) in x coordinate,'
+                            'must be an integer value (default: 50)',
+            },
+            'z': {
+                'value': 50, 'type': int,
+                'description': 'max random limit (mean -z..z) in z coordinate,'
+                            'must be an integer value (default: 50)',
+            },
+        }
 
         """
         for param, info in params.items():
             self.params[param] = info.get('value')
             self.params_types[param] = info.get('type')
             self.available_params.append(param)
+            if info.get('hide'):
+                self.hide_params.append(param)
+            if info.get('description'):
+                self.params_descriptions[param] = info.get('description')
 
         self.logger = logger
-        self._config_dir_path = os.path.join(plugin_dir, plugin_name)
+        self.plugin_name = plugin_name
+        self._config_dir_path = os.path.join(plugin_dir, self.plugin_name)
         self._config_path = os.path.join(self._config_dir_path, config_name)
 
         self.parse_config()
@@ -85,7 +119,7 @@ class Config(object):
 
         # Read config
         with open(self._config_path, 'r') as configuration:
-            parsed_config = json.load(configuration, encoding='utf-8')
+            parsed_config = yaml.safe_load(configuration)
 
         if (not isinstance(parsed_config, dict)
             or parsed_config.keys() != self.available_params):
@@ -109,16 +143,36 @@ class Config(object):
         return True
 
     def dump_config(self):
+        # Construct config header
+        header = self._construct_config_header()
+
         if not os.path.exists(self._config_dir_path):
             os.mkdir(self._config_dir_path)
-
         with open(self._config_path, 'w') as config:
-            json.dump(self.__dict__(), config)
+            # Add header
+            config.write(header)
+            # Dump parameters
+            yaml.safe_dump(self.__dict__(), config)
 
         self.logger.info("For configurate plugin change: {}!".format(
             self._config_path
         ))
         self.logger.info("Configuration has been dumped to file!")
+
+    def _construct_config_header(self):
+        header = '# {} configuration file\n'.format(self.plugin_name)
+
+        if not self.params_descriptions:
+            return header
+
+        params_descriptions = [
+            '{}: {}'.format(key, desc)
+            for key, desc in self.params_descriptions.items()
+        ]
+        descriptions = '# Parameters:\n#\t{}\n\n'.format(
+            '\n#\t'.join(params_descriptions)
+        )
+        return header + descriptions
 
     def __dict__(self):
         return self.params
@@ -127,6 +181,7 @@ class Config(object):
         params_repr_list = [
             '{}={}'.format(key, value)
             for key, value in self.params.items()
+            if key not in self.hide_params
         ]
         return ', '.join(params_repr_list)
 
@@ -136,9 +191,9 @@ class ConfigCommand(Command):
     def __init__(self, name, config, player_formatter=None):
         Command.__init__(self, name)
         self.sub_commands = {
-            'reload': self._reload,
-            'params': self._params,
-            'set': self._set
+            'reload': self._reload_subcommand,
+            'params': self._params_subcommand,
+            'set': self._set_subcommand
         }
         self.config = config
         if player_formatter is None:
@@ -158,9 +213,9 @@ class ConfigCommand(Command):
 
         elif parameters[0] in self.sub_commands.keys():
             sub_command = parameters.pop(0)
-            self.sub_commands[sub_command](caller, *parameters)
+            self.sub_commands[sub_command](caller, parameters)
 
-    def _reload(self, caller, *args):
+    def _reload_subcommand(self, caller, args):
         if args:
             caller.sendMessage(self._p('§4Arguments not provided!'))
             return
@@ -173,25 +228,23 @@ class ConfigCommand(Command):
         else:
             caller.sendMessage(self._p('§4Configuration file restored!'))
 
-    def _params(self, caller, *args):
+    def _params_subcommand(self, caller, args):
         if args:
             caller.sendMessage(self._p('§4Arguments not provided!'))
             return
         caller.sendMessage(self._p('Current params: {}'.format(str(self.config))))
 
 
-    def _set(self, caller, *args):
-        if not args or len(args) == 1:
-            caller.sendMessage(self._p('Params available to set: {}'.format(
-                ', '.join(self.config.available_params)
-            )))
-            return
+    def _set_subcommand(self, caller, args):
+        params = filter(lambda key: key not in self.config.hide_params,
+                        self.config.available_params)
 
-        if len(args) > 2:
+        arguments_length = len(args)
+
+        if arguments_length > 2:
             caller.sendMessage(self._p('§4Invalid arguments count!'))
-            return
 
-        elif args[0] in self.config.available_params and len(args) == 2:
+        elif arguments_length == 2 and args[0] in params:
             key = args[0]
             try:
                 type_ = self.config.params_types.get(key)
@@ -208,23 +261,38 @@ class ConfigCommand(Command):
                 caller.sendMessage(self._p('§4 {}!'.format(e)))
                 return True
             caller.sendMessage(self._p('§2Param {} now is {}!'.format(key, value)))
+            return
 
+        caller.sendMessage(self._p('Params available to set: {}'.format(
+            ', '.join(params)
+        )))
         return True
 
     def tabComplete(self, sender, alias, args, location=None):
         if not sender.isOp():
             return []
 
-        if not args[0]:
+        sub_command = args[0]
+        args_count = len(args)
+        if not sub_command:
             return self.sub_commands.keys()
 
-        elif len(args) == 1:
-            return filter(lambda ch: ch.startswith(args[0]), self.sub_commands.keys())
+        elif args_count == 1:
+            return filter(lambda ch: ch.startswith(args[0]),
+                          self.sub_commands.keys())
 
-        elif args[0] in self.sub_commands.keys():
-            if args[0] == 'set':
-                if len(args) == 2:
-                    return self.config.available_params
-                if args[1] in self.config.available_params and len(args) == 3:
-                    return ['<int>']
-            return []
+        elif sub_command in self.sub_commands.keys():
+            if sub_command != 'set':
+                return []
+
+            # Filter available params to set by command
+            params = filter(lambda key: key not in self.config.hide_params,
+                            self.config.available_params)
+            param_arg = args[1]
+
+            if args_count == 2 and not param_arg:
+                return params
+            elif args_count == 2:
+                return filter(lambda ch: ch.startswith(param_arg), params)
+            elif args_count == 3 and param_arg in params and not param_arg:
+                return ['{}'.format(self.config.params_types[param_arg])]
