@@ -39,7 +39,7 @@ Or replace values in `/plugins/RandomRespawn/config.yml` file.
 
 ### Q: What are the default limits?
 
-By default limits is `x=50`, `z=50`. Coordinate `y` is always on top of world.
+By default limits are `x=50`, `z=50`. Coordinate `y` is always on top of world.
 
 ### **Q**: Does not work with Essentials Spawn!
 
