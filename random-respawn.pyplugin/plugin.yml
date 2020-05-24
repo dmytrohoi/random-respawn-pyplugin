@@ -1,0 +1,7 @@
+name: RandomRespawn
+main: RandomRespawnPlugin
+prefix: random-respawn
+version: 0.0.2
+commands:
+    random-respawn-config:
+        description: Configure plugin

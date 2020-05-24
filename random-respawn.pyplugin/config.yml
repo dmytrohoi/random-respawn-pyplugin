@@ -1,0 +1,11 @@
+# RandomRespawn v0.0.2 (on PyPlugins https://github.com/pyplugins/pyplugins)
+# Link: https://github.com/dmytrohoi/random-respawn-pyplugin
+#
+# Option:
+# x - max random limit (mean -x..x) in x coordinate,
+#     must be an integer value (default: 50)
+# z - max random limit (mean -z..z) in z coordinate,
+#     must be an integer value (default: 50)'
+
+x: 50
+z: 50
